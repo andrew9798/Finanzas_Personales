@@ -1,25 +1,23 @@
-{
-  "ingresos": [
+[
     {
       "id": 1,
-      "descripcion": "Salario Mensual",
-      "monto": 3000,
+      "concepto": "Salario Mensual",
+      "cantidad": 3000,
       "categoria": "Salario",
       "fecha": "2024-06-01"
     },
     {
       "id": 2,
-      "descripcion": "Venta de Artículos Usados",
-      "monto": 150,
+      "concepto": "Venta de Artículos Usados",
+      "cantidad": 150,
       "categoria": "Ventas",
       "fecha": "2024-06-05"
     },
     {
       "id": 3,
-      "descripcion": "Ingreso por Freelance",
-      "monto": 600,
+      "concepto": "Ingreso por Freelance",
+      "cantidad": 600,
       "categoria": "Freelance",
       "fecha": "2024-06-10"
     }
   ]
-}

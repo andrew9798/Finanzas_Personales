@@ -4,10 +4,11 @@ import SeccionTransacciones from './components/SeccionTransacciones';
 import AnalisisFinanciero from './components/AnalisisFinanciero';
 import Header from './components/Header';
 import PanelResumen from './components/PanelResumen';
-
-
-
-
+import ingresosData from './services/ingresos.js';
+import gastosData from './services/gastos.js';
+import { use } from 'react';
+import { useEffect } from 'react';
+  
 
 // Componente Principal: APP
 const App = () => {
@@ -19,6 +20,19 @@ const App = () => {
   const [gastos, setGastos] = useState([
     { id: 1, concepto: 'Alquiler', cantidad: 0, categoria: 'Vivienda', fecha: '' }
   ]);
+
+
+  useEffect(() => { 
+
+    ingresosData.getAll().then(initialIngresos => {
+      setIngresos(initialIngresos)
+    })
+
+    gastosData.getAll().then(initialGastos => {
+      setGastos(initialGastos)
+    })
+
+  }, []);
 
   // Categorías
   const categoriasIngresos = ['Trabajo', 'Inversiones', 'Alquiler', 'Otros'];
