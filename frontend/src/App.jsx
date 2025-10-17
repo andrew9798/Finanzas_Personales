@@ -6,6 +6,7 @@ import Header from './components/Header';
 import PanelResumen from './components/PanelResumen';
 import ingresosData from './services/ingresos.js';
 import gastosData from './services/gastos.js';
+import SearchBar from './components/SearchBar.jsx';
 import { use } from 'react';
 import { useEffect } from 'react';
   
@@ -80,6 +81,16 @@ const App = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <Header DollarSign={DollarSign} />
+
+        <SearchBar onSearch={(mes, anyo) => {
+          ingresosData.findByMonthYear(mes, anyo).then(filtradosIngresos => {
+            setIngresos(filtradosIngresos)
+          })
+          gastosData.findByMonthYear(mes, anyo).then(filtradosGastos => {
+            setGastos(filtradosGastos)
+          })
+          
+        }} />
 
         {/* Panel de Resumen */}
         <PanelResumen 
