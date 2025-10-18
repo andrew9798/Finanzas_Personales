@@ -28,7 +28,7 @@ const update = (id, newObject) => {
 
 //crear función que encuentre gastos por mes y año, teniendo en cuenta que la fecha es un string en formato "YYYY-MM-DD"   
 const findByMonthYear = (mes, anyo) => {
-  const request = axios.get(`${baseUrl}/gastos/${anyo}/${mes}`)
+  const request = axios.get(`${baseUrl}/${anyo}/${mes}`)
   console.log(request)
   return request.then(response => response.data)
   
