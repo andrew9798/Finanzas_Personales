@@ -4,7 +4,6 @@ import { PlusCircle } from 'lucide-react';
 import TablaTransacciones from './TablaTransacciones';
 import ResumenCategorias from './ResumenCategorias';
 
-
 const SeccionTransacciones = ({ 
   titulo, 
   icono: Icono, 
