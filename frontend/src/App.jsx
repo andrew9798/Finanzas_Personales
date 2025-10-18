@@ -28,6 +28,8 @@ const App = () => {
   // Categorías
   const categoriasIngresos = ['Trabajo', 'Inversiones', 'Alquiler', 'Bizum', 'Otros'];
   const categoriasGastos = ['Vivienda', 'Alimentación', 'Transporte', 'Ocio', 'Salud', 'Educación', 'Servicios', 'bizum', 'Otros'];
+  const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const años = [ 2020, 2021, 2022, 2023, 2024, 2025];
 
   // ========== FUNCIONES PARA GESTIONAR INGRESOS ==========
   
