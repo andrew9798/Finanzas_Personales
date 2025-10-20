@@ -7,29 +7,44 @@ import PanelResumen from './components/PanelResumen';
 import ingresosData from './services/ingresos.js';
 import gastosData from './services/gastos.js';
 import SearchBar from './components/SearchBar.jsx';
+import categoriasService from './services/categorias.js';
 
 // Componente Principal: APP
 const App = () => {
   // Estados
   const [ingresos, setIngresos] = useState([]);
   const [gastos, setGastos] = useState([]);
+  const [guardandoIngresos, setGuardandoIngresos] = useState(new Set());
+  const [guardandoGastos, setGuardandoGastos] = useState(new Set());
 
-  // Cargar datos iniciales
-  useEffect(() => {
-    ingresosData.getAll().then(initialIngresos => {
+useEffect(() => {
+  const cargarDatos = async () => {
+    try {
+      const [initialIngresos, initialGastos, catIngresos, catGastos] = await Promise.all([
+        ingresosData.getAll(),
+        gastosData.getAll(),
+        categoriasService.getIngresos(),  // ⭐ Usa el servicio
+        categoriasService.getGastos()     // ⭐ Usa el servicio
+      ]);
+
       setIngresos(initialIngresos);
-    });
-
-    gastosData.getAll().then(initialGastos => {
       setGastos(initialGastos);
-    });
-  }, []);
+      setCategoriasIngresos(catIngresos);
+      setCategoriasGastos(catGastos);
+      setCargandoCategorias(false);
 
+      console.log('✅ Categorías cargadas:', { catIngresos, catGastos });
+    } catch (error) {
+      console.error('❌ Error al cargar datos:', error);
+      setCargandoCategorias(false);
+    }
+  };
+
+  cargarDatos();
+}, []);
   // Categorías
   const categoriasIngresos = ['Trabajo', 'Inversiones', 'Alquiler', 'Bizum', 'Otros'];
   const categoriasGastos = ['Vivienda', 'Alimentación', 'Transporte', 'Ocio', 'Salud', 'Educación', 'Servicios', 'bizum', 'Otros'];
-  const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-  const años = [ 2020, 2021, 2022, 2023, 2024, 2025];
 
   // ========== FUNCIONES PARA GESTIONAR INGRESOS ==========
   
@@ -46,46 +61,78 @@ const App = () => {
     }]);
   };
 
+  // ⭐ Solo actualiza el estado local (onChange)
   const actualizarIngreso = (id, campo, valor) => {
-    setIngresos(ingresos.map(i => {
-      if (i.id === id) {
-        const updatedIngreso = { 
-          ...i, 
-          [campo]: campo === 'cantidad' ? parseFloat(valor) || 0 : valor 
-        };
-        
-        // ⭐ Validar si todos los campos obligatorios están completos
-        const estaCompleto = 
-          updatedIngreso.concepto.trim() !== '' && 
-          updatedIngreso.cantidad > 0 && 
-          updatedIngreso.fecha !== '';
-        
-        // ⭐ Si es nuevo Y está completo, guardarlo en el backend
-        if (updatedIngreso.isNew && estaCompleto) {
-          const { isNew, ...ingresoParaGuardar } = updatedIngreso; // Remover el flag isNew
-          ingresosData.create(ingresoParaGuardar).then(savedIngreso => {
-            console.log('✅ Ingreso guardado:', savedIngreso);
-          });
-          delete updatedIngreso.isNew; // Marcar como guardado
-        } 
-        // ⭐ Si NO es nuevo (ya existe en backend), actualizarlo
-        else if (!updatedIngreso.isNew) {
-          const { isNew, ...ingresoParaActualizar } = updatedIngreso;
-          ingresosData.update(id, ingresoParaActualizar);
-        }
-        
-        return updatedIngreso;
-      }
-      return i;
-    }));
+    setIngresos(ingresos.map(i => 
+      i.id === id 
+        ? { ...i, [campo]: campo === 'cantidad' ? parseFloat(valor) || 0 : valor }
+        : i
+    ));
   };
 
-  const eliminarIngreso = (id) => {
+  // ⭐ Guarda en backend al salir del campo (onBlur)
+  const guardarIngreso = async (id) => {
+    const ingreso = ingresos.find(i => i.id === id);
+    console.log("guardarIngreso llamado para id:", id, ingreso);
+    if (!ingreso) return;
+
+    // ⭐ Validar que los campos obligatorios estén completos
+    const estaCompleto = 
+      ingreso.concepto.trim() !== '' && 
+      ingreso.cantidad > 0 && 
+      ingreso.fecha !== '';
+    
+    if (!estaCompleto) {
+      return; // No guarda si está incompleto
+    }
+
+    // Evitar guardar si ya está guardando
+    if (guardandoIngresos.has(id)) return;
+
+    setGuardandoIngresos(prev => new Set(prev).add(id));
+
+    try {
+      const { isNew, ...ingresoParaGuardar } = ingreso;
+      
+      if (isNew) {
+        // ⭐ Crear nuevo ingreso en backend
+        const savedIngreso = await ingresosData.create(ingresoParaGuardar);
+        console.log('✅ Ingreso guardado:', savedIngreso);
+        
+        // Actualizar estado para quitar el flag isNew
+        setIngresos(prev => prev.map(i => 
+          i.id === id ? { ...i, isNew: false } : i
+        ));
+      } else {
+        // ⭐ Actualizar ingreso existente
+        await ingresosData.update(id, ingresoParaGuardar);
+        console.log('🔄 Ingreso actualizado:', ingresoParaGuardar);
+      }
+    } catch (error) {
+      console.error('❌ Error al guardar ingreso:', error);
+      alert('Error al guardar el ingreso. Intenta de nuevo.');
+    } finally {
+      setGuardandoIngresos(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+    }
+  };
+
+  const eliminarIngreso = async (id) => {
     const ingreso = ingresos.find(i => i.id === id);
     
     // ⭐ Solo eliminar del backend si NO es nuevo (ya fue guardado)
     if (ingreso && !ingreso.isNew) {
-      ingresosData.Delete(id);
+      try {
+        await ingresosData.Delete(id);
+        console.log('🗑️ Ingreso eliminado del backend');
+      } catch (error) {
+        console.error('❌ Error al eliminar ingreso:', error);
+        alert('Error al eliminar el ingreso');
+        return;
+      }
     }
     
     setIngresos(ingresos.filter(i => i.id !== id));
@@ -106,46 +153,77 @@ const App = () => {
     }]);
   };
 
+  // ⭐ Solo actualiza el estado local (onChange)
   const actualizarGasto = (id, campo, valor) => {
-    setGastos(gastos.map(g => {
-      if (g.id === id) {
-        const updatedGasto = { 
-          ...g, 
-          [campo]: campo === 'cantidad' ? parseFloat(valor) || 0 : valor 
-        };
-        
-        // ⭐ Validar si todos los campos obligatorios están completos
-        const estaCompleto = 
-          updatedGasto.concepto.trim() !== '' && 
-          updatedGasto.cantidad > 0 && 
-          updatedGasto.fecha !== '';
-        
-        // ⭐ Si es nuevo Y está completo, guardarlo en el backend
-        if (updatedGasto.isNew && estaCompleto) {
-          const { isNew, ...gastoParaGuardar } = updatedGasto; // Remover el flag isNew
-          gastosData.create(gastoParaGuardar).then(savedGasto => {
-            console.log('✅ Gasto guardado:', savedGasto);
-          });
-          delete updatedGasto.isNew; // Marcar como guardado
-        } 
-        // ⭐ Si NO es nuevo (ya existe en backend), actualizarlo
-        else if (!updatedGasto.isNew) {
-          const { isNew, ...gastoParaActualizar } = updatedGasto;
-          gastosData.update(id, gastoParaActualizar);
-        }
-        
-        return updatedGasto;
-      }
-      return g;
-    }));
+    setGastos(gastos.map(g => 
+      g.id === id 
+        ? { ...g, [campo]: campo === 'cantidad' ? parseFloat(valor) || 0 : valor }
+        : g
+    ));
   };
 
-  const eliminarGasto = (id) => {
+  // ⭐ Guarda en backend al salir del campo (onBlur)
+  const guardarGasto = async (id) => {
+    const gasto = gastos.find(g => g.id === id);
+    if (!gasto) return;
+
+    // ⭐ Validar que los campos obligatorios estén completos
+    const estaCompleto = 
+      gasto.concepto.trim() !== '' && 
+      gasto.cantidad > 0 && 
+      gasto.fecha !== '';
+    
+    if (!estaCompleto) {
+      return; // No guarda si está incompleto
+    }
+
+    // Evitar guardar si ya está guardando
+    if (guardandoGastos.has(id)) return;
+
+    setGuardandoGastos(prev => new Set(prev).add(id));
+
+    try {
+      const { isNew, ...gastoParaGuardar } = gasto;
+      
+      if (isNew) {
+        // ⭐ Crear nuevo gasto en backend
+        const savedGasto = await gastosData.create(gastoParaGuardar);
+        console.log('✅ Gasto guardado:', savedGasto);
+        
+        // Actualizar estado para quitar el flag isNew
+        setGastos(prev => prev.map(g => 
+          g.id === id ? { ...g, isNew: false } : g
+        ));
+      } else {
+        // ⭐ Actualizar gasto existente
+        await gastosData.update(id, gastoParaGuardar);
+        console.log('🔄 Gasto actualizado:', gastoParaGuardar);
+      }
+    } catch (error) {
+      console.error('❌ Error al guardar gasto:', error);
+      alert('Error al guardar el gasto. Intenta de nuevo.');
+    } finally {
+      setGuardandoGastos(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+    }
+  };
+
+  const eliminarGasto = async (id) => {
     const gasto = gastos.find(g => g.id === id);
     
     // ⭐ Solo eliminar del backend si NO es nuevo (ya fue guardado)
     if (gasto && !gasto.isNew) {
-      gastosData.Delete(id);
+      try {
+        await gastosData.Delete(id);
+        console.log('🗑️ Gasto eliminado del backend');
+      } catch (error) {
+        console.error('❌ Error al eliminar gasto:', error);
+        alert('Error al eliminar el gasto');
+        return;
+      }
     }
     
     setGastos(gastos.filter(g => g.id !== id));
@@ -187,8 +265,10 @@ const App = () => {
           tipo="ingreso"
           onAgregar={agregarIngreso}
           onActualizar={actualizarIngreso}
+          onGuardar={guardarIngreso}  // ⭐ Nueva prop
           onEliminar={eliminarIngreso}
           total={totalIngresos}
+          guardandoIds={guardandoIngresos}  // ⭐ Nueva prop
         />
 
         {/* Sección de Gastos */}
@@ -200,8 +280,10 @@ const App = () => {
           tipo="gasto"
           onAgregar={agregarGasto}
           onActualizar={actualizarGasto}
+          onGuardar={guardarGasto}  // ⭐ Nueva prop
           onEliminar={eliminarGasto}
           total={totalGastos}
+          guardandoIds={guardandoGastos}  // ⭐ Nueva prop
         />
 
         {/* Análisis Financiero */}

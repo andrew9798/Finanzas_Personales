@@ -11,9 +11,11 @@ const SeccionTransacciones = ({
   categorias, 
   tipo,
   onAgregar, 
-  onActualizar, 
+  onActualizar,
+  onGuardar,        // ⭐ Nueva prop
   onEliminar,
-  total
+  total,
+  guardandoIds      // ⭐ Nueva prop
 }) => {
   const colorBoton = tipo === 'ingreso' 
     ? 'bg-green-600 hover:bg-green-700' 
@@ -42,7 +44,9 @@ const SeccionTransacciones = ({
         categorias={categorias}
         tipo={tipo}
         onActualizar={onActualizar}
+        onGuardar={onGuardar}          // ⭐ Pasar nueva prop
         onEliminar={onEliminar}
+        guardandoIds={guardandoIds}    // ⭐ Pasar nueva prop
       />
 
       <ResumenCategorias
