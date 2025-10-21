@@ -8,63 +8,74 @@ import ingresosData from './services/ingresos.js';
 import gastosData from './services/gastos.js';
 import SearchBar from './components/SearchBar.jsx';
 import categoriasService from './services/categorias.js';
+import { v4 as uuidv4 } from 'uuid';
 
-// Componente Principal: APP
 const App = () => {
   // Estados
   const [ingresos, setIngresos] = useState([]);
   const [gastos, setGastos] = useState([]);
+  console.log("Estos son los gastos:", gastos[gastos.length - 1]);
   const [guardandoIngresos, setGuardandoIngresos] = useState(new Set());
   const [guardandoGastos, setGuardandoGastos] = useState(new Set());
+  
+  // ✅ Estados para categorías
+  const [categoriasIngresos, setCategoriasIngresos] = useState(['Trabajo', 'Inversiones', 'Alquiler', 'Bizum', 'Otros']);
+  const [categoriasGastos, setCategoriasGastos] = useState(['Vivienda', 'Alimentación', 'Transporte', 'Ocio', 'Salud', 'Educación', 'Servicios', 'bizum', 'Otros']);
+  const [cargandoCategorias, setCargandoCategorias] = useState(true);
 
-useEffect(() => {
-  const cargarDatos = async () => {
-    try {
-      const [initialIngresos, initialGastos, catIngresos, catGastos] = await Promise.all([
-        ingresosData.getAll(),
-        gastosData.getAll(),
-        categoriasService.getIngresos(),  // ⭐ Usa el servicio
-        categoriasService.getGastos()     // ⭐ Usa el servicio
-      ]);
+  useEffect(() => {
+    const cargarDatos = async () => {
+      try {
+        const [initialIngresos, initialGastos, catIngresos, catGastos] = await Promise.all([
+          ingresosData.getAll(),
+          gastosData.getAll(),
+          categoriasService.getIngresos(),
+          categoriasService.getGastos()
+        ]);
 
-      setIngresos(initialIngresos);
-      setGastos(initialGastos);
-      setCategoriasIngresos(catIngresos);
-      setCategoriasGastos(catGastos);
-      setCargandoCategorias(false);
+        // ✅ Validar que sean arrays antes de setear
+        setIngresos(Array.isArray(initialIngresos) ? initialIngresos : []);
+        setGastos(Array.isArray(initialGastos) ? initialGastos : []);
+        setCategoriasIngresos(Array.isArray(catIngresos) ? catIngresos : categoriasIngresos);
+        setCategoriasGastos(Array.isArray(catGastos) ? catGastos : categoriasGastos);
+        setCargandoCategorias(false);
 
-      console.log('✅ Categorías cargadas:', { catIngresos, catGastos });
-    } catch (error) {
-      console.error('❌ Error al cargar datos:', error);
-      setCargandoCategorias(false);
-    }
-  };
+        console.log('✅ Categorías cargadas:', { catIngresos, catGastos });
+      } catch (error) {
+        console.error('❌ Error al cargar datos:', error);
+        // ✅ En caso de error, mantener arrays vacíos
+        setIngresos([]);
+        setGastos([]);
+        setCargandoCategorias(false);
+      }
+    };
 
-  cargarDatos();
-}, []);
-  // Categorías
-  const categoriasIngresos = ['Trabajo', 'Inversiones', 'Alquiler', 'Bizum', 'Otros'];
-  const categoriasGastos = ['Vivienda', 'Alimentación', 'Transporte', 'Ocio', 'Salud', 'Educación', 'Servicios', 'bizum', 'Otros'];
+    cargarDatos();
+  }, []);
 
   // ========== FUNCIONES PARA GESTIONAR INGRESOS ==========
-  
+
   const agregarIngreso = () => {
-    const nuevoId = ingresos.length > 0 ? Math.max(...ingresos.map(i => i.id)) + 1 : 1;
-    // ⭐ Solo agregamos al estado local, NO guardamos en el backend aún
-    setIngresos([...ingresos, { 
-      id: nuevoId, 
-      concepto: '', 
-      cantidad: 0, 
-      categoria: 'Trabajo', 
+    // ✅ Genera un ID único CADA VEZ que se llama la función
+    const nuevoId = uuidv4();
+    
+    // ✅ Usa prev para acceder al estado actual
+    setIngresos(prev => [...prev, {
+      id: nuevoId,
+      concepto: '',
+      cantidad: 0,
+      categoria: 'Trabajo',
       fecha: '',
-      isNew: true  // ⭐ Marca como nuevo (no guardado)
+      isNew: true
     }]);
   };
 
   // ⭐ Solo actualiza el estado local (onChange)
   const actualizarIngreso = (id, campo, valor) => {
-    setIngresos(ingresos.map(i => 
-      i.id === id 
+    console.log(`Este es el id creado: ${id}`);
+    // ✅ Usa prev
+    setIngresos(prev => prev.map(i =>
+      i.id === id
         ? { ...i, [campo]: campo === 'cantidad' ? parseFloat(valor) || 0 : valor }
         : i
     ));
@@ -77,13 +88,13 @@ useEffect(() => {
     if (!ingreso) return;
 
     // ⭐ Validar que los campos obligatorios estén completos
-    const estaCompleto = 
-      ingreso.concepto.trim() !== '' && 
-      ingreso.cantidad > 0 && 
+    const estaCompleto =
+      ingreso.concepto.trim() !== '' &&
+      ingreso.cantidad > 0 &&
       ingreso.fecha !== '';
-    
+
     if (!estaCompleto) {
-      return; // No guarda si está incompleto
+      return;
     }
 
     // Evitar guardar si ya está guardando
@@ -93,18 +104,20 @@ useEffect(() => {
 
     try {
       const { isNew, ...ingresoParaGuardar } = ingreso;
-      
+
       if (isNew) {
-        // ⭐ Crear nuevo ingreso en backend
+        console.log(`isNew: ${isNew}`);
+        console.log('Ingreso a guardar:', ingresoParaGuardar);
         const savedIngreso = await ingresosData.create(ingresoParaGuardar);
-        console.log('✅ Ingreso guardado:', savedIngreso);
+        console.log("✅ Ingreso guardado en backend:", savedIngreso);
         
-        // Actualizar estado para quitar el flag isNew
+        // ✅ CORRECCIÓN: Añadir return explícito
         setIngresos(prev => prev.map(i => 
           i.id === id ? { ...i, isNew: false } : i
         ));
+        
+        console.log("✅ Estado actualizado: isNew = false");
       } else {
-        // ⭐ Actualizar ingreso existente
         await ingresosData.update(id, ingresoParaGuardar);
         console.log('🔄 Ingreso actualizado:', ingresoParaGuardar);
       }
@@ -122,7 +135,7 @@ useEffect(() => {
 
   const eliminarIngreso = async (id) => {
     const ingreso = ingresos.find(i => i.id === id);
-    
+
     // ⭐ Solo eliminar del backend si NO es nuevo (ya fue guardado)
     if (ingreso && !ingreso.isNew) {
       try {
@@ -134,29 +147,35 @@ useEffect(() => {
         return;
       }
     }
-    
-    setIngresos(ingresos.filter(i => i.id !== id));
+
+    // ✅ Usa prev
+    setIngresos(prev => prev.filter(i => i.id !== id));
   };
 
   // ========== FUNCIONES PARA GESTIONAR GASTOS ==========
-  
+  // ✅ COPIADAS EXACTAMENTE DE INGRESOS
+
   const agregarGasto = () => {
-    const nuevoId = gastos.length > 0 ? Math.max(...gastos.map(g => g.id)) + 1 : 1;
-    // ⭐ Solo agregamos al estado local, NO guardamos en el backend aún
-    setGastos([...gastos, { 
-      id: nuevoId, 
-      concepto: '', 
-      cantidad: 0, 
-      categoria: 'Otros', 
+    // ✅ Genera un ID único CADA VEZ que se llama la función
+    const nuevoId = uuidv4();
+    
+    // ✅ Usa prev para acceder al estado actual
+    setGastos(prev => [...prev, {
+      id: nuevoId,
+      concepto: '',
+      cantidad: 0,
+      categoria: 'Otros',
       fecha: '',
-      isNew: true  // ⭐ Marca como nuevo (no guardado)
+      isNew: true
     }]);
   };
 
   // ⭐ Solo actualiza el estado local (onChange)
   const actualizarGasto = (id, campo, valor) => {
-    setGastos(gastos.map(g => 
-      g.id === id 
+    console.log(`Este es el id creado: ${id}`);
+    // ✅ Usa prev
+    setGastos(prev => prev.map(g =>
+      g.id === id
         ? { ...g, [campo]: campo === 'cantidad' ? parseFloat(valor) || 0 : valor }
         : g
     ));
@@ -165,16 +184,17 @@ useEffect(() => {
   // ⭐ Guarda en backend al salir del campo (onBlur)
   const guardarGasto = async (id) => {
     const gasto = gastos.find(g => g.id === id);
+    console.log("guardarGasto llamado para id:", id, gasto);
     if (!gasto) return;
 
     // ⭐ Validar que los campos obligatorios estén completos
-    const estaCompleto = 
-      gasto.concepto.trim() !== '' && 
-      gasto.cantidad > 0 && 
+    const estaCompleto =
+      gasto.concepto.trim() !== '' &&
+      gasto.cantidad > 0 &&
       gasto.fecha !== '';
-    
+
     if (!estaCompleto) {
-      return; // No guarda si está incompleto
+      return;
     }
 
     // Evitar guardar si ya está guardando
@@ -184,18 +204,21 @@ useEffect(() => {
 
     try {
       const { isNew, ...gastoParaGuardar } = gasto;
-      
+      console.log("Gasto para guardar:", gastoParaGuardar);
+
       if (isNew) {
-        // ⭐ Crear nuevo gasto en backend
+        console.log(`isNew: ${isNew}`);
+        console.log('Gasto a guardar:', gastoParaGuardar);
         const savedGasto = await gastosData.create(gastoParaGuardar);
-        console.log('✅ Gasto guardado:', savedGasto);
+        console.log("✅ Gasto guardado en backend:", savedGasto);
         
-        // Actualizar estado para quitar el flag isNew
+        // ✅ CORRECCIÓN: Añadir return explícito
         setGastos(prev => prev.map(g => 
           g.id === id ? { ...g, isNew: false } : g
         ));
+        
+        console.log("✅ Estado actualizado: isNew = false");
       } else {
-        // ⭐ Actualizar gasto existente
         await gastosData.update(id, gastoParaGuardar);
         console.log('🔄 Gasto actualizado:', gastoParaGuardar);
       }
@@ -213,7 +236,7 @@ useEffect(() => {
 
   const eliminarGasto = async (id) => {
     const gasto = gastos.find(g => g.id === id);
-    
+
     // ⭐ Solo eliminar del backend si NO es nuevo (ya fue guardado)
     if (gasto && !gasto.isNew) {
       try {
@@ -225,13 +248,14 @@ useEffect(() => {
         return;
       }
     }
-    
-    setGastos(gastos.filter(g => g.id !== id));
+
+    // ✅ Usa prev
+    setGastos(prev => prev.filter(g => g.id !== id));
   };
 
   // Cálculos financieros
-  const totalIngresos = ingresos.reduce((sum, i) => sum + i.cantidad, 0);
-  const totalGastos = gastos.reduce((sum, g) => sum + g.cantidad, 0);
+  const totalIngresos = ingresos.reduce((sum, i) => sum + (i.cantidad || 0), 0);
+  const totalGastos = gastos.reduce((sum, g) => sum + (g.cantidad || 0), 0);
   const balance = totalIngresos - totalGastos;
 
   return (
@@ -242,10 +266,12 @@ useEffect(() => {
 
         <SearchBar onSearch={(mes, anyo) => {
           ingresosData.findByMonthYear(mes, anyo).then(filtradosIngresos => {
-            setIngresos(filtradosIngresos);
+            // ✅ Valida antes de setear
+            setIngresos(Array.isArray(filtradosIngresos) ? filtradosIngresos : []);
           });
           gastosData.findByMonthYear(mes, anyo).then(filtradosGastos => {
-            setGastos(filtradosGastos);
+            // ✅ Valida antes de setear
+            setGastos(Array.isArray(filtradosGastos) ? filtradosGastos : []);
           });
         }} />
 
@@ -265,10 +291,10 @@ useEffect(() => {
           tipo="ingreso"
           onAgregar={agregarIngreso}
           onActualizar={actualizarIngreso}
-          onGuardar={guardarIngreso}  // ⭐ Nueva prop
+          onGuardar={guardarIngreso}
           onEliminar={eliminarIngreso}
           total={totalIngresos}
-          guardandoIds={guardandoIngresos}  // ⭐ Nueva prop
+          guardandoIds={guardandoIngresos}
         />
 
         {/* Sección de Gastos */}
@@ -280,10 +306,10 @@ useEffect(() => {
           tipo="gasto"
           onAgregar={agregarGasto}
           onActualizar={actualizarGasto}
-          onGuardar={guardarGasto}  // ⭐ Nueva prop
+          onGuardar={guardarGasto}
           onEliminar={eliminarGasto}
           total={totalGastos}
-          guardandoIds={guardandoGastos}  // ⭐ Nueva prop
+          guardandoIds={guardandoGastos}
         />
 
         {/* Análisis Financiero */}

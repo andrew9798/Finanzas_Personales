@@ -9,6 +9,7 @@ const getAll = () => {
 
 //funcion para crear nuevo ingreso
 const create = newObject => {
+  console.log('Creando nuevo ingreso:', newObject);
   const request = axios.post(baseUrl, newObject)
   return request.then(response => response.data)
 }
@@ -21,6 +22,7 @@ const Delete = id => {
 
 //funcion para actualizar ingreso
 const update = (id, newObject) => {
+  console.log(`Actualizando ingreso con id: ${id}`, newObject);
   const request = axios.put(`${baseUrl}/${id}`, newObject)
   return request.then(response => response.data)
  

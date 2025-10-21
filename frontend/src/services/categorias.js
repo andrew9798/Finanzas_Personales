@@ -13,7 +13,7 @@ const getGastos = () => {
   return request.then(response => response.data);
 };
 
-export {
+export default {
   getIngresos,
   getGastos
 };

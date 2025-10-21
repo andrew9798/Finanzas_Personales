@@ -10,6 +10,7 @@ const getAll = () => {
 
 //funcion para crear nuevo gasto
 const create = newObject => {
+    console.log('Creando nuevo gasto:', newObject);
   const request = axios.post(baseUrl, newObject)
   return request.then(response => response.data)
 }

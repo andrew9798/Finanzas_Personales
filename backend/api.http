@@ -40,11 +40,14 @@ GET http://localhost:1234/gastos
 POST http://localhost:1234/gastos
 Content-Type: application/json
 
-{
-  "cantidad": 300,
-  "categoria": "Compra de materiales",
-  "fecha": "2024-06-15"
-} 
+{ 
+  "id": "2",
+  "concepto": "Venta de almohadas",
+  "cantidad": 600,
+  "categoria": "inversion",
+  "fecha": "2024-08-15"
+}
+
 
 ### actualizar un gasto
 PUT http://localhost:1234/gastos/1

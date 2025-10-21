@@ -32,6 +32,7 @@ const TablaTransacciones = ({
               </td>
             </tr>
           ) : (
+            // console.log(datos),
             datos.map(item => {
               const estaGuardando = guardandoIds?.has(item.id);
               const esNuevo = item.isNew;

@@ -1,7 +1,7 @@
 import { z } from 'zod';  // ⭐ IMPORTANTE: con llaves {}
 
 // Definir las categorías
-const categoriasIngresos = ['salario', 'venta', 'inversion', 'regalos', 'bizum', 'otros'];
+const categoriasIngresos = ['salario', 'venta', 'Trabajo', 'inversion', 'regalos', 'bizum', 'otros'];
 const categoriasGastos = ['alimentacion', 'transporte', 'vivienda', 'ocio', 'salud', 'educacion', 'inversion', 'otros'];    
 
 // Función para validar tipo de categoría

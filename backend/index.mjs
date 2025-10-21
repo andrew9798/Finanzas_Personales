@@ -17,11 +17,19 @@ app.use(cors({
   allowedHeaders: ['Content-Type']
 }));
 
-//llamada a los JSON
-import ingresos from '../frontend/src/services/ingresos.js';
-import gastos from '../frontend/src/services/gastos.js';
+// ⭐ LLAMADA A LOS JSON (IMPORTACIÓN DIRECTA)
+import ingresosJsonData from "./ingresos.json" assert { type: 'json' };
+import gastosJsonData from './gastos.json' assert { type: 'json' };
 
-// ⭐ NUEVOS ENDPOINTS PARA OBTENER CATEGORÍAS
+// ⭐ DECLARAR VARIABLES MUTABLES A PARTIR DE LOS DATOS DEL JSON
+let ingresos = [...ingresosJsonData];
+let gastos = [...gastosJsonData];
+
+console.log(`Datos de ingresos iniciales cargados: ${ingresos.length} registros.`);
+console.log(`Datos de gastos iniciales cargados: ${gastos.length} registros.`);
+
+
+// ⭐ ENDPOINTS PARA OBTENER CATEGORÍAS
 app.get('/categorias/ingresos', (req, res) => {
   res.status(200).json(categoriasIngresos);
 });
@@ -30,7 +38,9 @@ app.get('/categorias/gastos', (req, res) => {
   res.status(200).json(categoriasGastos);
 });
 
-//Endpoint para obtener todos los ingresos
+// ========== ENDPOINTS DE INGRESOS ==========
+
+// Endpoint para obtener todos los ingresos
 app.get('/ingresos', (req, res) => {
   res.status(200).json(ingresos);
 });
@@ -39,8 +49,9 @@ app.get('/ingresos', (req, res) => {
 app.get('/ingresos/:anyo/:mes', (req, res) => {
   const { anyo, mes } = req.params;
   if (mes && anyo) {
-    const ingresosFiltrados = filter(ingreso => {
+    const ingresosFiltrados = ingresos.filter(ingreso => {
       const fecha = new Date(ingreso.fecha);
+      if (isNaN(fecha.getTime())) return false;
       return fecha.getMonth() + 1 === parseInt(mes) && fecha.getFullYear() === parseInt(anyo);
     });
     res.status(200).json(ingresosFiltrados);
@@ -49,67 +60,83 @@ app.get('/ingresos/:anyo/:mes', (req, res) => {
   }
 });
 
-// ⭐ ACTUALIZADO - Endpoint para crear un nuevo ingreso
+// Endpoint para crear un nuevo ingreso
 app.post('/ingresos', (req, res) => {
-  const result = validateIngreso(req.body);  // ⭐ Cambiado a validateIngreso
+  const result = validateIngreso(req.body);
+  console.log('📥 Validación ingreso:', result);
 
   if (result.error) {
-    //quiero una respuesta que me de los errores de validacion
-    return res.status(400).json({ errors: JSON.parse(result.error.message) });
+    console.log("❌ Error de validación:", result.error);
+    return res.status(400).json({ errors: result.error.errors });
   }
 
   const ingreso = result.data;
   const id = randomUUID();
   const nuevoIngreso = { ...ingreso, id };
-  push(nuevoIngreso);
+  ingresos.push(nuevoIngreso);
+  
+  console.log('✅ Ingreso creado:', nuevoIngreso);
   res.status(201).json(nuevoIngreso);
 });
 
-//Endpoint actualizar un ingreso
+// Endpoint actualizar un ingreso
 app.put('/ingresos/:id', (req, res) => {
   const { id } = req.params;
-  const ingresoIndex = findIndex(i => i.id === id);  // ⭐ Quitado parseInt si usas UUID
+  console.log(`📝 Actualizando ingreso con id: ${id}`);
+
+  const ingresoIndex = ingresos.findIndex(i => String(i.id) === id);
 
   if (ingresoIndex !== -1) {
-    const result = validateIngreso(req.body);  // ⭐ Validar también en PUT
+    const result = validateIngreso(req.body);
     
     if (result.error) {
+      console.log("❌ Error de validación:", result.error);
       return res.status(400).json({ errors: result.error.errors });
     }
 
     const updatedIngreso = { ...ingresos[ingresoIndex], ...result.data };
     ingresos[ingresoIndex] = updatedIngreso;
+    
+    console.log('✅ Ingreso actualizado:', updatedIngreso);
     res.status(200).json(updatedIngreso);
   } else {
+    console.log('❌ Ingreso no encontrado');
     res.status(404).json({ error: 'Ingreso no encontrado' });
   }
 });
 
-//Endpoint eliminar un ingreso
+// Endpoint eliminar un ingreso
 app.delete('/ingresos/:id', (req, res) => {
   const { id } = req.params;
-  const ingresoIndex = findIndex(i => i.id === id);  // ⭐ Quitado parseInt
+  console.log(`🗑️ Eliminando ingreso con id: ${id}`);
+  
+  const ingresoIndex = ingresos.findIndex(i => String(i.id) === id);
   
   if (ingresoIndex !== -1) {
-    splice(ingresoIndex, 1);
+    ingresos.splice(ingresoIndex, 1);
+    console.log('✅ Ingreso eliminado');
     res.status(204).send();
   } else {
+    console.log('❌ Ingreso no encontrado');
     res.status(404).json({ error: 'Ingreso no encontrado' });
   }
 });
 
-//Endpoint para obtener todos los gastos
+// ========== ENDPOINTS DE GASTOS ==========
+// ✅ COPIADOS EXACTAMENTE DE INGRESOS
+
+// Endpoint para obtener todos los gastos
 app.get('/gastos', (req, res) => {
   res.status(200).json(gastos);
 });
 
 // Endpoint para obtener gastos filtrados por mes y año
 app.get('/gastos/:anyo/:mes', (req, res) => {
-  const { anyo, mes } = req.params; 
-
+  const { anyo, mes } = req.params;
   if (mes && anyo) {
-    const gastosFiltrados = _filter(gasto => {
+    const gastosFiltrados = gastos.filter(gasto => {
       const fecha = new Date(gasto.fecha);
+      if (isNaN(fecha.getTime())) return false;
       return fecha.getMonth() + 1 === parseInt(mes) && fecha.getFullYear() === parseInt(anyo);
     });
     res.status(200).json(gastosFiltrados);
@@ -118,57 +145,70 @@ app.get('/gastos/:anyo/:mes', (req, res) => {
   }
 }); 
 
-// ⭐ ACTUALIZADO - Endpoint para crear un nuevo gasto
+// Endpoint para crear un nuevo gasto
 app.post('/gastos', (req, res) => {
-  const result = validateGasto(req.body);  // ⭐ Agregar validación
+  const result = validateGasto(req.body);
+  console.log('📥 Validación gasto:', result);
 
   if (result.error) {
+    console.log("❌ Error de validación:", result.error);
     return res.status(400).json({ errors: result.error.errors });
   }
 
   const gasto = result.data;
   const id = randomUUID();
   const nuevoGasto = { ...gasto, id };
-  _push(nuevoGasto);
+  gastos.push(nuevoGasto);
+  
+  console.log('✅ Gasto creado:', nuevoGasto);
   res.status(201).json(nuevoGasto);
 }); 
 
-//Endpoint actualizar un gasto
+// Endpoint actualizar un gasto
 app.put('/gastos/:id', (req, res) => {
   const { id } = req.params;
-  const gastoIndex = _findIndex(g => g.id === id);  // ⭐ Quitado parseInt
+  console.log(`📝 Actualizando gasto con id: ${id}`);
+
+  const gastoIndex = gastos.findIndex(g => String(g.id) === id);
 
   if (gastoIndex !== -1) {
-    const result = validateGasto(req.body);  // ⭐ Validar también en PUT
+    const result = validateGasto(req.body);
     
     if (result.error) {
+      console.log("❌ Error de validación:", result.error);
       return res.status(400).json({ errors: result.error.errors });
     }
 
     const updatedGasto = { ...gastos[gastoIndex], ...result.data };
     gastos[gastoIndex] = updatedGasto;
+    
+    console.log('✅ Gasto actualizado:', updatedGasto);
     res.status(200).json(updatedGasto);
   } else {
+    console.log('❌ Gasto no encontrado');
     res.status(404).json({ error: 'Gasto no encontrado' });
   }
 });
 
-//Endpoint eliminar un gasto
+// Endpoint eliminar un gasto
 app.delete('/gastos/:id', (req, res) => {
-  const { id } = req.params;  
-  const gastoIndex = _findIndex(g => g.id === id);  // ⭐ Quitado parseInt
-
+  const { id } = req.params;
+  console.log(`🗑️ Eliminando gasto con id: ${id}`);
+  
+  const gastoIndex = gastos.findIndex(g => String(g.id) === id);
+  
   if (gastoIndex !== -1) {
-    _splice(gastoIndex, 1);
+    gastos.splice(gastoIndex, 1);
+    console.log('✅ Gasto eliminado');
     res.status(204).send();
   } else {
+    console.log('❌ Gasto no encontrado');
     res.status(404).json({ error: 'Gasto no encontrado' });
   }
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 1234;
 
-// ⭐ INICIA EL SERVIDOR CON EXPRESS DIRECTAMENTE
 app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`)
-})
+  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`)
+});

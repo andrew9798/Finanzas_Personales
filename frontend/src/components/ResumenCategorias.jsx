@@ -1,13 +1,11 @@
 // resumen de categorias de ingresos y gastos
 
 const ResumenCategorias = ({ datos, categorias, total, tipo }) => {
-  // console.log(`Procesando categoría: ${tipo} = ${total}`);
   const datosPorCategoria = categorias.map(cat => ({
     categoria: cat,
     total: datos.filter(item => item.categoria === cat).reduce((sum, item) => sum + item.cantidad, 0)
   })).filter(c => c.total > 0);
 
-  console.log(`Datos por categoría para ${tipo}:`, datosPorCategoria);
   if (datosPorCategoria.length === 0){
     return null;
   }
@@ -22,7 +20,6 @@ const ResumenCategorias = ({ datos, categorias, total, tipo }) => {
         {tipo === 'ingreso' ? 'Ingresos' : 'Gastos'} por Categoría
       </h3>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {console.log(`total de ${tipo}: ${total}`)}
         {datosPorCategoria.map(cat => (
           <div key={cat.categoria} className={`${colorFondo} rounded-lg p-3 border ${colorBorde}`}>
             <p className="text-sm text-gray-600">{cat.categoria}</p>
@@ -30,13 +27,11 @@ const ResumenCategorias = ({ datos, categorias, total, tipo }) => {
             {/* Aqui es donde creamos el porcentaje en la tarjeta */}
             {tipo === 'gasto' && total > 0 && (
               <p className="text-xs text-gray-500 mt-1">
-                {console.log(`total de ${tipo}: ${total} dentro del bucle`)}
                 {((cat.total / total) * 100).toFixed(1)}%
               </p>
             )}
             {tipo === 'ingreso' && total > 0 && (
               <p className="text-xs text-gray-500 mt-1">
-                {console.log(`total de ${tipo}: ${total} dentro del bucle`)}
                 {((cat.total / total) * 100).toFixed(1)}%
               </p>
             )}
